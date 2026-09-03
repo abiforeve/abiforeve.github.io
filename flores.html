@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ramo de Lirios Rosas en la Naturaleza</title>
+  <style>
+    body {
+      margin: 0;
+      background: #090d16;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .canvas-container {
+      position: relative;
+    }
+
+    canvas {
+      box-shadow: 0 10px 35px rgba(0,0,0,0.7);
+      border-radius: 16px;
+    }
+
+    .message-main {
+      position: absolute;
+      top: 30px;
+      width: 100%;
+      text-align: center;
+      color: #fbcfe8;
+      font-size: 2.2rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-shadow: 0 0 12px rgba(244, 114, 182, 0.7);
+      opacity: 0;
+      transition: opacity 2s ease-in-out;
+      pointer-events: none;
+    }
+
+    .message-side {
+      position: absolute;
+      top: 100px;
+      right: 30px;
+      color: #f472b6;
+      font-size: 1.3rem;
+      font-weight: 600;
+      text-shadow: 0 0 10px rgba(219, 39, 119, 0.6);
+      opacity: 0;
+      transition: opacity 2s ease-in-out 0.8s;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .heart {
+      color: #e11d48;
+      display: inline-block;
+      animation: pulse 1.2s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.25); }
+    }
+
+    .visible {
+      opacity: 1 !important;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 22px;
+      background: linear-gradient(135deg, #db2777, #be185d);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(219, 39, 119, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(219, 39, 119, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+<div class="canvas-container">
+  <div id="mainMsg" class="message-main">Esta es tu sorpresa</div>
+  <div id="sideMsg" class="message-side">Te quiero mucho <span class="heart">♥</span></div>
+  <canvas id="canvas" width="600" height="650"></canvas>
+</div>
+
+<button onclick="resetAnimation()">Repetir animación</button>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const mainMsg = document.getElementById('mainMsg');
+const sideMsg = document.getElementById('sideMsg');
+
+let progress = 0;
+let time = 0; // Tiempo para la brisa constante
+let animId = null;
+
+const originX = 300;
+const originY = 600;
+
+// Configuración de los lirios principales
+const lilies = [
+  { maxHeight: 370, flowerSize: 55, angle: 0, controlOffset: 0, windSens: 1.0 },
+  { maxHeight: 320, flowerSize: 48, angle: -0.22, controlOffset: -20, windSens: 0.8 },
+  { maxHeight: 330, flowerSize: 50, angle: 0.20, controlOffset: 20, windSens: 0.9 },
+  { maxHeight: 260, flowerSize: 42, angle: -0.42, controlOffset: -35, windSens: 0.7 },
+  { maxHeight: 270, flowerSize: 44, angle: 0.40, controlOffset: 35, windSens: 0.75 }
+];
+
+// Generación de briznas de pasto
+const grassBlades = [];
+for (let i = 0; i < 90; i++) {
+  grassBlades.push({
+    x: Math.random() * canvas.width,
+    height: 40 + Math.random() * 50,
+    angle: (Math.random() - 0.5) * 0.2,
+    stiffness: 0.5 + Math.random() * 0.5
+  });
+}
+
+// 1. Resplandor verde místico en la base
+function drawGreenAura(prog) {
+  ctx.save();
+  const auraRadius = 160 * Math.min(prog * 1.2, 1);
+  const auraGrad = ctx.createRadialGradient(originX, originY - 120, 10, originX, originY - 120, auraRadius);
+  
+  auraGrad.addColorStop(0, 'rgba(74, 222, 128, 0.25)');
+  auraGrad.addColorStop(0.5, 'rgba(34, 197, 94, 0.12)'); 
+  auraGrad.addColorStop(1, 'rgba(9, 13, 22, 0)');
+
+  ctx.fillStyle = auraGrad;
+  ctx.beginPath();
+  ctx.arc(originX, originY - 120, auraRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// 2. Campo de pasto animado con viento
+function drawGrass(wind) {
+  grassBlades.forEach(blade => {
+    const currentWind = wind * blade.stiffness;
+    const topX = blade.x + Math.sin(blade.angle + currentWind) * blade.height;
+    const topY = canvas.height - Math.cos(blade.angle + currentWind) * blade.height;
+
+    const grad = ctx.createLinearGradient(blade.x, canvas.height, topX, topY);
+    grad.addColorStop(0, '#143818');
+    grad.addColorStop(1, '#4ade80');
+
+    ctx.beginPath();
+    ctx.moveTo(blade.x - 3, canvas.height);
+    ctx.quadraticCurveTo(blade.x, canvas.height - blade.height * 0.5, topX, topY);
+    ctx.quadraticCurveTo(blade.x + 3, canvas.height - blade.height * 0.5, blade.x + 3, canvas.height);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  });
+}
+
+// 3. Tallo con curva flexible de brisa
+function drawStem(lily, prog, wind) {
+  const currentHeight = lily.maxHeight * Math.min(prog * 1.3, 1);
+  const windOffset = Math.sin(time + lily.angle * 2) * 12 * lily.windSens * (currentHeight / lily.maxHeight);
+  
+  const endX = originX + Math.sin(lily.angle) * currentHeight + windOffset;
+  const endY = originY - Math.cos(lily.angle) * currentHeight;
+
+  ctx.beginPath();
+  ctx.moveTo(originX, originY);
+  ctx.quadraticCurveTo(
+    originX + lily.controlOffset + windOffset * 0.5,
+    originY - currentHeight * 0.5,
+    endX,
+    endY
+  );
+  ctx.strokeStyle = '#234e23';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  return { x: endX, y: endY, angle: lily.angle + (windOffset * 0.002) };
+}
+
+// 4. Lirio realista detallado con pecas y vetas
+function drawFlower(x, y, size, bloomProgress, wind) {
+  if (bloomProgress <= 0) return;
+
+  const petalCount = 6;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(wind * 0.2); // Leve inclinación de la cabeza de la flor por el viento
+
+  // Estambres y pistilo detallados
+  if (bloomProgress > 0.3) {
+    const stamenProg = (bloomProgress - 0.3) / 0.7;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(i * 5, -size * 0.4 * stamenProg, i * 9, -size * 0.75 * stamenProg);
+      ctx.strokeStyle = '#a3e635';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Anteras con brillo amarillento
+      ctx.beginPath();
+      ctx.ellipse(i * 9, -size * 0.75 * stamenProg, 4, 2, i * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#facc15';
+      ctx.fill();
+    }
+  }
+
+  // Pétalos redondeados y naturales
+  for (let i = 0; i < petalCount; i++) {
+    const angle = (i * (Math.PI * 2 / petalCount)) - Math.PI / 2;
+    const openAngle = angle * bloomProgress;
+
+    ctx.save();
+    ctx.rotate(openAngle);
+
+    // Degradado multicapa rosa
+    const grad = ctx.createLinearGradient(0, 0, 0, -size * 1.1 * bloomProgress);
+    grad.addColorStop(0, '#ffffff');       // Base blanca
+    grad.addColorStop(0.2, '#fbcfe8');     // Rosa pastel
+    grad.addColorStop(0.6, '#f472b6');     // Rosa vibrante
+    grad.addColorStop(1, '#be185d');       // Borde magenta profundo
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(
+      -size * 0.4 * bloomProgress, -size * 0.4 * bloomProgress,
+      -size * 0.35 * bloomProgress, -size * 0.9 * bloomProgress,
+      0, -size * 1.15 * bloomProgress
+    );
+    ctx.bezierCurveTo(
+      size * 0.35 * bloomProgress, -size * 0.9 * bloomProgress,
+      size * 0.4 * bloomProgress, -size * 0.4 * bloomProgress,
+      0, 0
+    );
+
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Veta central del pétalo
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -size * 1.05 * bloomProgress);
+    ctx.strokeStyle = 'rgba(190, 24, 93, 0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Pecas o motitas características de los lirios
+    if (bloomProgress > 0.6) {
+      ctx.fillStyle = '#9d174d';
+      for (let p = 0; p < 5; p++) {
+        const px = (Math.sin(p * 3) * size * 0.12);
+        const py = -size * (0.2 + p * 0.08);
+        ctx.beginPath();
+        ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  time += 0.025;
+  const wind = Math.sin(time) * 0.15; // Brisa continua suave
+
+  // 1. Resplandor verde ambiental
+  drawGreenAura(progress);
+
+  // 2. Fondo de Pasto
+  drawGrass(wind);
+
+  if (progress < 1) {
+    progress += 0.0025;
+  } else {
+    mainMsg.classList.add('visible');
+    sideMsg.classList.add('visible');
+  }
+
+  // 3. Crecimiento de tallos
+  const flowerTips = lilies.map(lily => {
+    return {
+      tip: drawStem(lily, progress, wind),
+      size: lily.flowerSize
+    };
+  });
+
+  // 4. Apertura y florecimiento
+  const bloomProgress = Math.max(0, (progress - 0.45) / 0.55);
+  flowerTips.forEach(item => {
+    drawFlower(item.tip.x, item.tip.y, item.size, bloomProgress, wind);
+  });
+
+  animId = requestAnimationFrame(animate);
+}
+
+function resetAnimation() {
+  cancelAnimationFrame(animId);
+  progress = 0;
+  time = 0;
+  mainMsg.classList.remove('visible');
+  sideMsg.classList.remove('visible');
+  animate();
+}
+
+animate();
+</script>
+
+</body>
+</html>
